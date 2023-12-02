@@ -24,85 +24,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.base import BaseEstimator, TransformerMixin
 from time import time
 
-zip_file = "Credit_card.zip"
 
-# opening the zip file in READ mode
-with ZipFile(zip_file, 'r') as zip:
-    zip.printdir()
-    print('Extracting...')
-    zip.extractall()
-    print('Extracted successfully!')
-
-
-#load data
-cc_df    = pd.read_csv("Credit_card.csv")
-cc_label = pd.read_csv("Credit_card_label.csv")
-
-cc_final = pd.merge(cc_df, cc_label, on='Ind_ID')
-
-pre_cc = cc_final
-
-pre_cc['Annual_income'].fillna(pre_cc['Annual_income'].median(),inplace =True)
-pre_cc['Birthday_count'].fillna(pre_cc['Birthday_count'].mean(),inplace =True)
-
-pre_cc['GENDER'].fillna(pre_cc['GENDER'].mode()[0],inplace =True)
-pre_cc.dropna(subset=['Type_Occupation'], inplace=True)
-
-pre_cc['Age_conv'] = np.abs(pre_cc['Birthday_count'])/365
-
-#converting employed days into years
-pre_cc['Employed_years'] = (pre_cc['Employed_days']/365)
-
-pre_cc = pre_cc.reset_index(drop=True)
-
-ohe = OneHotEncoder(sparse=False,handle_unknown='ignore')
-cat_attribs = ['GENDER','Car_Owner','Propert_Owner','Type_Income','EDUCATION','Marital_status','Housing_type','Type_Occupation']
-enc_df = pd.DataFrame(ohe.fit_transform(pre_cc[['GENDER','Car_Owner','Propert_Owner','Type_Income','EDUCATION','Marital_status','Housing_type','Type_Occupation']]), columns = ohe.get_feature_names_out())
-
-cc_df = pre_cc.join(enc_df)
-
-cc_df.drop(cat_attribs,axis=1,inplace=True)
-
-X = cc_df.drop(['Ind_ID','label'],axis = 'columns')
-y = cc_df['label']
-
-from imblearn.over_sampling import SMOTE
-oversample = SMOTE()
-X, y = oversample.fit_resample(X, y)
-
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size = 0.3,stratify = y,random_state = 42)
-
-from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-np.random.seed(42)
-import json
-
-rfc = RandomForestClassifier(class_weight='balanced', random_state=42)
-
-params_grid = {
-            'max_depth': [5,10,15],
-            'max_features': [10,15],
-            'min_samples_split': [2, 5, 10],
-            'min_samples_leaf': [1,3],
-            'bootstrap': [True],
-            'n_estimators':[25,50,100]
-          }
-
-rfc_grid = GridSearchCV(rfc, params_grid,scoring='f1',cv =5, n_jobs = -1)
-rfc_grid.fit(X_train,y_train)
-
-best_params = rfc_grid.best_estimator_.get_params()
-
-param_dump = []
-for i in sorted(params_grid):
-  param_dump.append((i, best_params[i]))
-
-
-# start = time()
-rfc_model = rfc_grid.best_estimator_.fit(X_train,y_train)
 
 
 #Multiple page configurations
@@ -232,16 +154,103 @@ def input_features():
 #Create a new dataframe for user input features
 df = input_features()
 
-prediction = rfc_model.predict(df)
+zip_file = "Credit_card.zip"
 
+# opening the zip file in READ mode
+with ZipFile(zip_file, 'r') as zip:
+    zip.printdir()
+    print('Extracting...')
+    zip.extractall()
+    print('Extracted successfully!')
+
+
+#load data
+cc_df    = pd.read_csv("Credit_card.csv")
+cc_label = pd.read_csv("Credit_card_label.csv")
+
+cc_final = pd.merge(cc_df, cc_label, on='Ind_ID')
+
+pre_cc = cc_final
+
+pre_cc['Annual_income'].fillna(pre_cc['Annual_income'].median(),inplace =True)
+pre_cc['Birthday_count'].fillna(pre_cc['Birthday_count'].mean(),inplace =True)
+
+pre_cc['GENDER'].fillna(pre_cc['GENDER'].mode()[0],inplace =True)
+pre_cc.dropna(subset=['Type_Occupation'], inplace=True)
+
+pre_cc['Age_conv'] = np.abs(pre_cc['Birthday_count'])/365
+
+#converting employed days into years
+pre_cc['Employed_years'] = (pre_cc['Employed_days']/365)
+
+pre_cc = pre_cc.reset_index(drop=True)
+
+ohe = OneHotEncoder(sparse=False,handle_unknown='ignore')
+cat_attribs = ['GENDER','Car_Owner','Propert_Owner','Type_Income','EDUCATION','Marital_status','Housing_type','Type_Occupation']
+enc_df = pd.DataFrame(ohe.fit_transform(pre_cc[['GENDER','Car_Owner','Propert_Owner','Type_Income','EDUCATION','Marital_status','Housing_type','Type_Occupation']]), columns = ohe.get_feature_names_out())
+
+cc_df = pre_cc.join(enc_df)
+
+cc_df.drop(cat_attribs,axis=1,inplace=True)
+
+X = cc_df.drop(['Ind_ID','label'],axis = 'columns')
+y = cc_df['label']
+
+from imblearn.over_sampling import SMOTE
+oversample = SMOTE()
+X, y = oversample.fit_resample(X, y)
+
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size = 0.3,stratify = y,random_state = 42)
+
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+np.random.seed(42)
+import json
+
+rfc = RandomForestClassifier(class_weight='balanced', random_state=42)
+
+params_grid = {
+            'max_depth': [5,10,15],
+            'max_features': [10,15],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1,3],
+            'bootstrap': [True],
+            'n_estimators':[25,50,100]
+          }
+
+rfc_grid = GridSearchCV(rfc, params_grid,scoring='f1',cv =5, n_jobs = -1)
+rfc_grid.fit(X_train,y_train)
+
+best_params = rfc_grid.best_estimator_.get_params()
+
+param_dump = []
+for i in sorted(params_grid):
+  param_dump.append((i, best_params[i]))
+
+
+# start = time()
+rfc_model = rfc_grid.best_estimator_.fit(X_train,y_train)
+
+cat_attribs1 = ['GENDER','Car_Owner','Propert_Owner','Type_Income','EDUCATION','Marital_status','Housing_type','Type_Occupation']
+enc_df1 = pd.DataFrame(ohe.fit_transform(df[['GENDER','Car_Owner','Propert_Owner','Type_Income','EDUCATION','Marital_status','Housing_type','Type_Occupation']]), columns = ohe.get_feature_names_out())
+
+cc_df1 = pre_cc.join(enc_df1)
+
+cc_df1.drop(cat_attribs1,axis=1,inplace=True)
+
+prediction = rfc_model.predict(cc_df1)
+st.write(prediction)
 
 #Prediction button
 if st.button('Check my approval'):
         #will improve this section once the model part is ready,
         # until then this is just a example message when you click the button for prediction
-    if prediction == 0:
-        st.success('You are eligible')
-    if prediction == 0:
+     if prediction == 0:
         st.success('You are not eligible')
-
-st.write(prediction)
+     if prediction == 1:
+        st.success('You are  eligible')
+     else:
+        st.success('You are dummy')
